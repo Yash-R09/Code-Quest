@@ -9,10 +9,11 @@ backend/node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+frontend/.env
 
 # Firebase sensitive config
 frontend/src/firebaseConfig.js
-frontend/src/firebase.js
 
 # Logs
 logs
