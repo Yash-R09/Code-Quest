@@ -1,27 +1,50 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebaseConfig";
+import { auth, db } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
 import { problemLevels } from "./problemData";
 import Navbar from "./Navbar";
 
 const Dashboard = () => {
   const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!auth.currentUser) return;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setLoading(false);
+        navigate("/login");
+        return;
+      }
 
-      const ref = doc(db, "users", auth.currentUser.uid);
-      const snap = await getDoc(ref);
-      setUserData(snap.data());
-    };
-    fetchUser();
-  }, []);
+      try {
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
 
-  if (!userData) return <p className="text-white p-4">Loading...</p>;
+        if (snap.exists()) {
+          setUserData(snap.data());
+        } else {
+          console.log("User document not found");
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  if (loading) {
+    return <p className="text-white p-4">Loading...</p>;
+  }
+
+  if (!userData) {
+    return <p className="text-white p-4">User data not found.</p>;
+  }
 
   return (
     <div className="min-h-screen bg-indigo-900">
