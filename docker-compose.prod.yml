@@ -1,0 +1,16 @@
+services:
+  backend:
+    image: 399399108501.dkr.ecr.ap-south-1.amazonaws.com/codequest-backend:latest
+    container_name: codequest-backend
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    image: 399399108501.dkr.ecr.ap-south-1.amazonaws.com/codequest-frontend:latest
+    container_name: codequest-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
