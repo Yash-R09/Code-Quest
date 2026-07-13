@@ -5,45 +5,78 @@ pipeline {
         githubPush()
     }
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        AWS_ACCOUNT = '399399108501'
+
+        BACKEND_IMAGE = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/codequest-backend"
+        FRONTEND_IMAGE = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/codequest-frontend"
+    }
+
     stages {
 
-        stage('Git Pull') {
+        stage('Checkout') {
             steps {
-                sh '''
-                set -eux
-                sudo -u ubuntu bash -lc '
-                    cd /home/ubuntu/Code-Quest
-                    pwd
-                    git pull origin main
-                '
-                '''
+                checkout scm
             }
         }
 
         stage('Login to Amazon ECR') {
             steps {
                 sh '''
-                set -eux
-
-                aws ecr get-login-password --region ap-south-1 | \
+                aws ecr get-login-password --region $AWS_REGION | \
                 docker login \
                 --username AWS \
                 --password-stdin \
-                399399108501.dkr.ecr.ap-south-1.amazonaws.com
+                $AWS_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
                 '''
             }
         }
 
-        stage('Docker Deploy') {
+        stage('Build Backend Image') {
+            steps {
+                dir('backend') {
+                    sh '''
+                    docker build \
+                        -t $BACKEND_IMAGE:latest .
+                    '''
+                }
+            }
+        }
+
+        stage('Build Frontend Image') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                    docker build \
+                        -t $FRONTEND_IMAGE:latest .
+                    '''
+                }
+            }
+        }
+
+        stage('Push Backend Image') {
             steps {
                 sh '''
-                set -eux
-                sudo -u ubuntu bash -lc '
-                    cd /home/ubuntu/Code-Quest
-                    docker compose down || true
-                    docker compose up -d --build
-                    docker compose ps
-                '
+                docker push $BACKEND_IMAGE:latest
+                '''
+            }
+        }
+
+        stage('Push Frontend Image') {
+            steps {
+                sh '''
+                docker push $FRONTEND_IMAGE:latest
+                '''
+            }
+        }
+
+        stage('Start Instance Refresh') {
+            steps {
+                sh '''
+                aws autoscaling start-instance-refresh \
+                    --auto-scaling-group-name codequest-asg \
+                    --region $AWS_REGION
                 '''
             }
         }
