@@ -12,8 +12,6 @@ backend/node_modules/
 backend/.env
 frontend/.env
 
-# Firebase sensitive config
-frontend/src/firebaseConfig.js
 
 # Logs
 logs
